@@ -1,4 +1,4 @@
-﻿import base64
+import base64
 import io
 import wave
 import re
@@ -16,10 +16,29 @@ class VoiceInput(BaseModel):
     audio_base64: str | None = Field(default=None, max_length=3000000)
     text: str | None = Field(default=None, max_length=2000)
 
+class TTSInput(BaseModel):
+    language: str = "hi"
+    text: str = Field(min_length=1, max_length=2500)
+
 @router.get("/status")
 async def status():
     return {"configured": bhashini_client.configured(),
             "provider": "bhashini", "languages": sorted(LANGUAGES)}
+
+
+@router.post("/tts")
+@limiter.limit("20/minute")
+async def text_to_speech(request: Request, payload: TTSInput):
+    if payload.language not in LANGUAGES:
+        raise HTTPException(422, "Unsupported language")
+    if not bhashini_client.configured():
+        raise HTTPException(503, "Bhashini is not configured")
+    spoken = re.sub(r"\[([^]]+)\]\([^)]+\)", r"\1", payload.text)
+    spoken = re.sub(r"https?://\S+|[#*`]", "", spoken).strip()
+    if not spoken:
+        raise HTTPException(422, "No text received")
+    audio = await bhashini_client.text_to_speech(spoken[:2500], payload.language)
+    return {"audio_base64": audio, "audio_mime_type": "audio/wav", "provider": "bhashini"}
 
 @router.post("/chat")
 @limiter.limit("10/minute")

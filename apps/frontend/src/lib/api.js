@@ -30,6 +30,14 @@ export async function sendAssistantMessage(message, history = [], phoneNumber = 
   return response.data;
 }
 
+export async function synthesizeSpeech(text, language = "en", signal) {
+  const response = await api.post("/public/voice/tts", {
+    text,
+    language,
+  }, { timeout: 60000, signal });
+  return response.data;
+}
+
 export async function sendAssistantMessageWithAttachment(message, file, history = [], phoneNumber = null, profile = null, language = "en", signal) {
   const form = new FormData();
   form.append("message", message || "");

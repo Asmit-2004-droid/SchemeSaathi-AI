@@ -1,6 +1,6 @@
 # Government Scheme Eligibility Engine
 
-AI-based Rule Engine developed for Smart India Hackathon.
+AI-based Rule Engine developed for SchemeSaathi project.
 
 ## Features
 

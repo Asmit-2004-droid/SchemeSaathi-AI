@@ -2,7 +2,7 @@
 import uuid
 from typing import Literal
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, BackgroundTasks, Query
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 from sqlalchemy import String, Text, select, or_
 from sqlalchemy.exc import IntegrityError
@@ -10,7 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.config.database import Base, TimestampMixin, get_db
 from src.middlewares.auth_middleware import get_current_user
-from src.middlewares.rbac_middleware import require_any_staff
+from src.middlewares.rbac_middleware import require_roles
 from src.middlewares.rate_limiter import limiter
 from src.modules.users.models import User, UserRole
 from src.modules.auth import login_otp, recovery
@@ -18,6 +18,7 @@ from src.modules.public import support_service
 from src.utils.security import hash_password, verify_password, create_access_token
 
 router = APIRouter(prefix="/citizen", tags=["Citizen"])
+require_support_manager = require_roles("admin", "support")
 
 class Ticket(Base, TimestampMixin):
     __tablename__ = "support_tickets"
@@ -170,23 +171,28 @@ async def create_ticket(request: Request, payload: TicketInput, background_tasks
 
 
 @router.get("/tickets")
-async def tickets(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def tickets(response: Response, mine: bool = False, limit: int = Query(100, ge=1, le=200),
+                  offset: int = Query(0, ge=0), user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    response.headers["Cache-Control"] = "no-store"
+    manager = user.role in {UserRole.ADMIN, UserRole.SUPPORT} and not mine
     query = select(Ticket).order_by(Ticket.created_at.desc())
-    if user.role == UserRole.CITIZEN:
+    if not manager:
         query = query.where(Ticket.user_id == str(user.id))
-    return await support_service.ticket_views(db, (await db.execute(query)).scalars().all())
+    query = query.limit(limit).offset(offset)
+    return await support_service.ticket_views(db, (await db.execute(query)).scalars().all(), include_owner=manager)
 
 
 class TicketReply(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    response: str = Field(min_length=3, max_length=3000)
+    response: str | None = Field(default=None, min_length=3, max_length=3000)
     status: Literal["open", "in_progress", "resolved"]
 
     @model_validator(mode="after")
     def reject_blank(self):
-        self.response = self.response.strip()
-        if len(self.response) < 3:
-            raise ValueError("Enter a response")
+        if self.response is not None:
+            self.response = self.response.strip()
+            if len(self.response) < 3:
+                raise ValueError("Enter a response")
         return self
 
 
@@ -205,21 +211,25 @@ async def append_ticket_reply(db, ticket, user, message, status):
     ticket.updated_at = datetime.utcnow()
 
 
-@router.patch("/tickets/{ticket_id}", dependencies=[Depends(require_any_staff)])
+@router.patch("/tickets/{ticket_id}", dependencies=[Depends(require_support_manager)])
 @limiter.limit("20/minute")
 async def reply(request: Request, ticket_id: str, payload: TicketReply, background_tasks: BackgroundTasks,
                 user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     ticket = await db.get(Ticket, ticket_id)
     if not ticket:
         raise HTTPException(404, "Ticket not found")
-    await append_ticket_reply(db, ticket, user, payload.response, payload.status)
-    ticket.response = payload.response
+    if payload.response is None and ticket.status == payload.status:
+        return (await support_service.ticket_views(db, [ticket], include_owner=True))[0]
+    message = payload.response or ("Ticket status changed to " + payload.status.replace("_", " ") + ".")
+    await append_ticket_reply(db, ticket, user, message, payload.status)
+    if payload.response is not None:
+        ticket.response = payload.response
     owner = await db.get(User, uuid.UUID(ticket.user_id))
     deliveries = support_service.queue_notifications(db, ticket.id, owner.email, "staff_reply") if owner else []
     await db.commit()
     await db.refresh(ticket)
     background_tasks.add_task(support_service.deliver_notifications, deliveries)
-    return (await support_service.ticket_views(db, [ticket]))[0]
+    return (await support_service.ticket_views(db, [ticket], include_owner=True))[0]
 
 
 class TicketFollowup(BaseModel):

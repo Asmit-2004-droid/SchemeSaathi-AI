@@ -9,7 +9,6 @@ const baseCategories = [
     nameKey: "category_loan_name",
     queryKey: "loan",
     icon: "💰",
-    defaultCount: 95,
     descriptionKey: "category_loan_desc",
     tags: ["Loans", "Credit", "Finance", "Mudra", "PMEGP"],
   },
@@ -18,7 +17,6 @@ const baseCategories = [
     nameKey: "category_msme_name",
     queryKey: "MSME",
     icon: "🏭",
-    defaultCount: 140,
     descriptionKey: "category_msme_desc",
     tags: ["MSME", "Industry", "Subsidies", "Manufacturing"],
   },
@@ -27,7 +25,6 @@ const baseCategories = [
     nameKey: "category_startup_name",
     queryKey: "startup",
     icon: "🚀",
-    defaultCount: 42,
     descriptionKey: "category_startup_desc",
     tags: ["Startup", "Innovation", "Incubation", "Funding"],
   },
@@ -36,7 +33,6 @@ const baseCategories = [
     nameKey: "category_women_name",
     queryKey: "women",
     icon: "👩‍💼",
-    defaultCount: 58,
     descriptionKey: "category_women_desc",
     tags: ["Women", "Entrepreneurship", "Mahila", "Grants"],
   },
@@ -45,7 +41,6 @@ const baseCategories = [
     nameKey: "category_agri_name",
     queryKey: "agriculture",
     icon: "🌾",
-    defaultCount: 88,
     descriptionKey: "category_agri_desc",
     tags: ["Agriculture", "Rural", "Farming", "Solar"],
   },
@@ -54,7 +49,6 @@ const baseCategories = [
     nameKey: "category_education_name",
     queryKey: "education",
     icon: "🎓",
-    defaultCount: 64,
     descriptionKey: "category_education_desc",
     tags: ["Education", "Skills", "Training", "Scholarships"],
   },
@@ -63,7 +57,6 @@ const baseCategories = [
     nameKey: "category_craft_name",
     queryKey: "handicraft",
     icon: "🎨",
-    defaultCount: 36,
     descriptionKey: "category_craft_desc",
     tags: ["Handicraft", "Artisans", "Vishwakarma", "Weaving"],
   },
@@ -72,7 +65,6 @@ const baseCategories = [
     nameKey: "category_housing_name",
     queryKey: "housing",
     icon: "🏠",
-    defaultCount: 28,
     descriptionKey: "category_housing_desc",
     tags: ["Housing", "Urban", "Infrastructure", "SVANidhi"],
   },
@@ -81,7 +73,6 @@ const baseCategories = [
     nameKey: "category_welfare_name",
     queryKey: "welfare",
     icon: "🤝",
-    defaultCount: 76,
     descriptionKey: "category_welfare_desc",
     tags: ["Welfare", "Pension", "Social Security", "Inclusion"],
   },
@@ -90,7 +81,6 @@ const baseCategories = [
     nameKey: "category_subsidy_name",
     queryKey: "subsidy",
     icon: "💳",
-    defaultCount: 110,
     descriptionKey: "category_subsidy_desc",
     tags: ["Subsidy", "Grant", "DBT", "Financial Support"],
   },
@@ -99,7 +89,6 @@ const baseCategories = [
     nameKey: "category_technology_name",
     queryKey: "technology",
     icon: "💻",
-    defaultCount: 32,
     descriptionKey: "category_technology_desc",
     tags: ["Technology", "Green Energy", "Solar", "Digital"],
   },
@@ -108,23 +97,9 @@ const baseCategories = [
     nameKey: "category_health_name",
     queryKey: "health",
     icon: "🏥",
-    defaultCount: 45,
     descriptionKey: "category_health_desc",
     tags: ["Health", "Insurance", "Medical", "Safety"],
   },
-];
-
-const QUICK_TAGS = [
-  "All",
-  "Loans",
-  "MSME",
-  "Startup",
-  "Women",
-  "Agriculture",
-  "Skills",
-  "Handicraft",
-  "Subsidy",
-  "Health",
 ];
 
 
@@ -195,16 +170,12 @@ export default function CategoriesPage() {
               <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-200 md:text-base">{t("categories_page_subtitle")}</p>
             </div>
             <div className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-slate-200 backdrop-blur-sm">
-              {baseCategories.length} categories · curated public schemes
+              {t("categories_count", { count: baseCategories.length })}
             </div>
           </div>
         </div>
 
-        <div className="my-6 rounded-2xl border border-amber-200 bg-[#fffaf0] p-4 text-sm leading-7 text-slate-700 shadow-sm">
-          {t("categories_notice")}
-        </div>
-
-        <div className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.06)] md:p-6">
+        <div className="mt-6 rounded-[26px] border border-slate-200 bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.06)] md:p-6">
           <label className="block text-sm font-semibold text-slate-700" htmlFor="scheme-search">{t("categories_search_label")}</label>
           <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-center">
             <input
@@ -271,8 +242,8 @@ export default function CategoriesPage() {
         {!hasFilter && (
           <div className="mt-8 space-y-5">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-2xl font-bold text-[#0d2b55]">Browse by category</h2>
-              <span className="text-sm text-slate-500">{baseCategories.length} categories</span>
+              <h2 className="text-2xl font-bold text-[#0d2b55]">{t("categories_browse")}</h2>
+              <span className="text-sm text-slate-500">{t("categories_count", { count: baseCategories.length })}</span>
             </div>
 
             <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
@@ -285,9 +256,6 @@ export default function CategoriesPage() {
                     <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#fff7dc] text-2xl shadow-inner shadow-[#f4d780]/30">
                       {item.icon}
                     </div>
-                    <span className="rounded-full bg-[#eef4ff] px-2.5 py-1 text-[11px] font-semibold text-[#0d2b55]">
-                      {item.defaultCount}+ resources
-                    </span>
                   </div>
 
                   <h3 className="mt-4 text-lg font-bold text-[#0d2b55]">{t(item.nameKey)}</h3>
@@ -299,7 +267,7 @@ export default function CategoriesPage() {
                         key={tag}
                         className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.08em] text-slate-600"
                       >
-                        {tag}
+                        {t(tag)}
                       </span>
                     ))}
                   </div>
@@ -313,7 +281,7 @@ export default function CategoriesPage() {
                     }}
                     className="mt-5 inline-flex items-center justify-center rounded-xl bg-[#0d2b55] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#173b70]"
                   >
-                    Explore {t(item.nameKey)}
+                    {t("categories_explore", { category: t(item.nameKey) })}
                   </button>
                 </article>
               ))}
@@ -340,7 +308,7 @@ export default function CategoriesPage() {
 
             {selectedCategory && !busy && !error && (
               <div className="mb-6 rounded-2xl border border-[#f4d780] bg-[#fffaf0] p-4 text-sm text-[#5f4910]">
-                Showing results for <span className="font-bold">{t(selectedCategory.nameKey)}</span>
+                {t("categories_showing", { category: t(selectedCategory.nameKey) })}
               </div>
             )}
 
@@ -359,7 +327,7 @@ export default function CategoriesPage() {
                 {result.schemes.map((s, i) => (
                   <article key={s.scheme_name} className="flex flex-col rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_10px_22px_rgba(15,23,42,0.04)]">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      {s.level || "Catalogue record"}
+                      {s.level || t("categories_record")}
                     </p>
                     <h2 className="my-2 text-lg font-bold text-[#0d2b55]">{s.scheme_name}</h2>
                     <p className="line-clamp-4 text-sm leading-7 text-slate-600">{s.description}</p>
@@ -375,7 +343,7 @@ export default function CategoriesPage() {
                         {[ [t("categories_benefits"), "benefits"], [t("categories_eligibility"), "eligibility"], [t("categories_documents"), "documents"], [t("categories_how_to_apply"), "application_process"] ].map(([label, key]) => (
                           <div key={key}>
                             <dt className="font-bold text-[#0d2b55]">{label}</dt>
-                            <dd className="whitespace-pre-wrap">{s[key] || "Not recorded. Check the official guidance."}</dd>
+                            <dd className="whitespace-pre-wrap">{s[key] || t("categories_not_recorded")}</dd>
                           </div>
                         ))}
                       </dl>

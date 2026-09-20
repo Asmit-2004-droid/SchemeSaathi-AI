@@ -15,8 +15,7 @@ import {
   OtherDetailsPage,
   ReviewPage,
   MatchingSchemesPage,
-  AIAssistantPage,
-  VoiceAssistantPage
+  AIAssistantPage
 } from "./components/findSchemes";
 
 import AboutPage from "./components/about/AboutPage";
@@ -29,6 +28,7 @@ import ProfilePage from "./components/profile/ProfilePage";
 
 
 import SupportPage from "./components/SupportPage";
+import AdminSupportPage from "./components/AdminSupportPage";
 
 function getPath() {
   const path = window.location.pathname.replace(/\/+$/, "");
@@ -56,6 +56,7 @@ export default function App() {
   }, []);
 
   if (path === "/support") return <SupportPage />;
+  if (path === "/admin/support") return <AdminSupportPage />;
 
   // Home
   if (path === "/") {
@@ -122,8 +123,8 @@ if (path === "/ai-assistant") {
   return <AIAssistantPage />;
 }
 
-if( path === "/voice-assistant") {
-  return <VoiceAssistantPage />;
+if (path === "/voice-assistant") {
+  return <AIAssistantPage />;
 }
 
 if (path === "/profile") {

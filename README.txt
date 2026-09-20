@@ -1,4 +1,4 @@
-# SchemeSaathi
+﻿# SchemeSaathi
 
 ## Government Scheme Discovery & Eligibility Platform
 
@@ -8,15 +8,15 @@ SchemeSaathi is a full-stack web platform that helps users discover relevant gov
 
 Instead of manually searching through multiple schemes, users can provide their basic personal, location and business details to receive relevant scheme recommendations along with eligibility explanations, required documents, benefits and official references.
 
-### 🌐 Live Website
+### ðŸŒ Live Website
 
 https://schemesathi-ai-26kj.onrender.com
 
 ---
 
-## ✨ Key Features
+## âœ¨ Key Features
 
-### 🔎 Personalized Scheme Matching
+### ðŸ”Ž Personalized Scheme Matching
 
 SchemeSaathi recommends schemes using information provided by the user, including:
 
@@ -34,7 +34,7 @@ The backend evaluates the submitted details against the available scheme catalog
 
 ---
 
-### 📋 Scheme Information
+### ðŸ“‹ Scheme Information
 
 Users can view useful information about recommended schemes, including:
 
@@ -49,7 +49,7 @@ The platform is designed to simplify scheme discovery while keeping official sou
 
 ---
 
-### 🔐 Secure Authentication
+### ðŸ” Secure Authentication
 
 SchemeSaathi includes a complete authentication and account-recovery flow.
 
@@ -70,7 +70,7 @@ Email OTP delivery is handled using **Brevo**.
 
 ---
 
-### 💬 Scheme Assistant
+### ðŸ’¬ Scheme Assistant
 
 The Scheme Assistant helps users understand available scheme information and navigate the platform.
 
@@ -89,7 +89,7 @@ Responses are based on the scheme catalogue and backend retrieval system.
 
 ---
 
-### 🎙️ Multilingual Voice Assistance
+### ðŸŽ™ï¸ Multilingual Voice Assistance
 
 SchemeSaathi includes a multilingual voice-assistance interface.
 
@@ -102,7 +102,7 @@ Users can interact using speech, and the configured language services support:
 
 ---
 
-### 🗺️ State & District Selection
+### ðŸ—ºï¸ State & District Selection
 
 The platform provides structured state and district selection for accurate location-based information.
 
@@ -110,13 +110,13 @@ Changing the selected state automatically updates the available district options
 
 ---
 
-### 👤 User Profile
+### ðŸ‘¤ User Profile
 
 Registered users can manage their profile and use their saved information while accessing platform features.
 
 ---
 
-### 🎫 Help & Support
+### ðŸŽ« Help & Support
 
 Users can access the **Help & Support** section to raise support requests and track their submitted tickets.
 
@@ -135,7 +135,7 @@ customercareprashasti@gmail.com
 
 ---
 
-# 🛠️ Technology Stack
+# ðŸ› ï¸ Technology Stack
 
 ## Frontend
 
@@ -173,21 +173,22 @@ customercareprashasti@gmail.com
 
 ---
 
-# ⚙️ How SchemeSaathi Works
+# âš™ï¸ How SchemeSaathi Works
 
 ```text
 Create Account / Sign In
-          ↓
+          â†“
 Complete User Details
-          ↓
+          â†“
 Enter Eligibility & Business Information
-          ↓
+          â†“
 Backend Evaluates Scheme Criteria
-          ↓
+          â†“
 Relevant Schemes Are Matched
-          ↓
+          â†“
 View Matching Reasons
-          ↓
+          â†“
 Check Benefits & Required Documents
-          ↓
+          â†“
 Visit Official Source for Further Action or authentication checks do not prove inbox/SMS delivery.
+

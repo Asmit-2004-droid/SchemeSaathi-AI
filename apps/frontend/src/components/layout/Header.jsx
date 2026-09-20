@@ -75,7 +75,7 @@ export default function Header() {
 
           {/* ================= MOBILE MENU ================= */}
 
-          <div className="mr-3 lg:hidden">
+          <div className="mr-3 xl:hidden">
 
             <button
               type="button"
@@ -124,7 +124,7 @@ export default function Header() {
 
         {/* ====== DESKTOP NAVIGATION ====== */}
 
-        <nav className="ml-auto hidden items-center gap-7 lg:flex xl:gap-10">
+        <nav className="ml-auto hidden items-center gap-7 xl:flex xl:gap-10">
 
           {navItems.map((item) => {
 
@@ -167,6 +167,9 @@ export default function Header() {
             <button
               type="button"
               onClick={() => setLanguageMenuOpen((open) => !open)}
+              aria-label={t("Language")}
+              aria-expanded={languageMenuOpen}
+              aria-controls="header-language-options"
               className="
                 rounded-full
                 border
@@ -185,7 +188,7 @@ export default function Header() {
             </button>
 
             {languageMenuOpen && (
-              <div
+              <div id="header-language-options"
                 className="
                   absolute
                   right-0
@@ -336,7 +339,7 @@ export default function Header() {
             border-white/10
             bg-[#0a1f3c]
             shadow-md
-            lg:hidden
+            xl:hidden
           "
         >
 

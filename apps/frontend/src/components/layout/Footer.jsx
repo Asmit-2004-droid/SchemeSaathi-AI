@@ -13,7 +13,7 @@ export default function Footer() {
         </p>
 
         <span className="font-semibold text-[#f4d780]">
-          {t("SIH26092 • Student Prototype")}
+          {t("SchemeSaathi • ")}
         </span>
       </div>
     </footer>

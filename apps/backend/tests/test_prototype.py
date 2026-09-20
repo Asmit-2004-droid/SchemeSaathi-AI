@@ -13,11 +13,11 @@ from src.modules.chatbot.service import chatbot_service
 
 @pytest.fixture(scope="module")
 def client():
-    from src.integrations import email_client, sms_client
+    from src.integrations import email_client
     from src.modules.auth import login_otp
     async def fake_delivery(*args, **kwargs):
         return True
-    with patch.object(email_client, "email_ready", return_value=True), patch.object(email_client, "send_email", fake_delivery), patch.object(sms_client, "otp_sms_ready", return_value=True), patch.object(sms_client, "send_reset_otp", fake_delivery), patch.object(login_otp, "otp_text", return_value="123456"), TestClient(app) as c:
+    with patch.object(email_client, "email_ready", return_value=True), patch.object(email_client, "send_email", fake_delivery), patch.object(login_otp, "otp_text", return_value="123456"), TestClient(app) as c:
         app.state.limiter.enabled = False
         yield c
 
@@ -52,7 +52,6 @@ def test_auth_is_real(client):
     assert client.post("/api/v1/citizen/login", json={"identifier":"9876543201","password":"a-long-test-password"}).status_code == 429
     assert client.get("/api/v1/citizen/me").status_code == 401
     assert client.get("/api/v1/users", headers=auth).status_code == 403
-    assert client.post("/api/v1/citizen/outreach-send", headers=auth).status_code == 403
 
 def test_password_reset_flow(client, monkeypatch):
     from src.modules.auth import recovery
@@ -97,8 +96,6 @@ def test_ticket_isolation_and_consent(client):
     assert len(client.get("/api/v1/citizen/tickets", headers=first).json()) == 1
     assert client.get("/api/v1/citizen/tickets", headers=second).json() == []
     assert client.patch("/api/v1/citizen/tickets/"+r.json()["id"], headers=second, json={"response":"Unauthorized response","status":"resolved"}).status_code == 403
-    assert client.put("/api/v1/citizen/sms-consent", headers=first, json={"consent":True}).json()["consent"]
-    assert not client.put("/api/v1/citizen/sms-consent", headers=first, json={"consent":False}).json()["consent"]
 
 def test_rule_regressions():
     assert parse_gender("Female") == ["female"]
@@ -160,39 +157,6 @@ def test_location_snapshot():
     assert all(len(items) == len(set(items)) and items for items in locations.values())
 
 
-def test_outreach_batches_are_reserved_and_not_sent_twice(client, monkeypatch):
-    import sqlite3
-    from src.config.settings import settings
-    from src.modules.public import citizen
-    staff = new_account(client, 8)
-    recipient = new_account(client, 9)
-    with sqlite3.connect(os.environ["DATABASE_URL"].removeprefix("sqlite+aiosqlite:///")) as db:
-        db.execute("UPDATE users SET role='ADMIN' WHERE email=?", ("tester8@example.com",))
-    assert client.put("/api/v1/citizen/sms-consent", headers=recipient, json={"consent":True}).status_code == 200
-    assert client.post("/api/v1/citizen/outreach-send",headers=staff).status_code == 503
-    sent = []
-    class Reply:
-        def raise_for_status(self): pass
-        def json(self): return {"type":"success"}
-    class Provider:
-        def __init__(self, **kwargs): pass
-        async def __aenter__(self): return self
-        async def __aexit__(self, *args): pass
-        async def post(self, url, **kwargs):
-            sent.append(kwargs["json"])
-            return Reply()
-    monkeypatch.setattr(citizen.httpx, "AsyncClient", Provider)
-    monkeypatch.setattr(settings, "SMS_LIVE_ENABLED", True)
-    monkeypatch.setattr(settings, "MSG91_AUTH_KEY", "test-only")
-    monkeypatch.setattr(settings, "MSG91_TEMPLATE_ID", "test-only")
-    monkeypatch.setattr(settings, "MSG91_SENDER_ID", "TESTER")
-    monkeypatch.setattr(settings, "PUBLIC_SITE_URL", "https://schemesaathi.test")
-    r = client.post("/api/v1/citizen/outreach-send",headers=staff)
-    assert r.status_code == 200, r.text
-    assert r.json()["status"] == "provider_accepted" and r.json()["count"] == 1
-    assert sent[0]["recipients"][0]["mobiles"] == "919876543209"
-    assert client.post("/api/v1/citizen/outreach-send",headers=staff).json()["count"] == 0
-    assert len(sent) == 1
 
 
 
@@ -215,11 +179,6 @@ def test_scheme_specific_chat_and_followup(client):
     assert "employment generation" in followup["retrieved_schemes"][0]["scheme_name"].lower()
 
 
-def test_sms_preference_persists(client):
-    auth = new_account(client, 15)
-    assert client.get("/api/v1/citizen/sms-consent", headers=auth).json()["consent"] is False
-    client.put("/api/v1/citizen/sms-consent", headers=auth, json={"consent":True})
-    assert client.get("/api/v1/citizen/sms-consent", headers=auth).json()["consent"] is True
 
 
 def test_voice_retains_answer_when_audio_fails(client, monkeypatch):

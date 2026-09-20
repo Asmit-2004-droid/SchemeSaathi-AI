@@ -9,7 +9,7 @@ const ticket = {
 async function supportApi(page, role = "citizen") {
   let current = structuredClone(ticket);
   await page.route("**/api/v1/citizen/me", route => route.fulfill({ json: { id: "support-test-user", role, fullName: "Support Tester", email: "support-user@example.com" } }));
-  await page.route("**/api/v1/citizen/sms-consent", route => route.fulfill({ json: { consent: false, live_enabled: false } }));
+
   await page.route("**/api/v1/citizen/tickets", route => route.fulfill({ json: [current] }));
   await page.route("**/api/v1/citizen/tickets/support-test-123*", route => {
     const payload = route.request().postDataJSON();

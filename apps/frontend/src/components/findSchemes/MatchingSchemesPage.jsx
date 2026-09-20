@@ -338,7 +338,7 @@ function SchemeCard({ scheme, onView }) {
         </div>
       )}
 
-      {/* WHY THIS MATCHED -- the explainability the SIH brief asks for */}
+      {/* WHY THIS MATCHED -- the explainability the project requirements asks for */}
 
       <div className="mt-4 rounded-lg bg-emerald-50 px-3 py-2">
         <p className="text-[11px] font-semibold text-emerald-700">{t("✓ Why this was suggested")}</p>

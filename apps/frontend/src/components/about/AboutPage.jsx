@@ -25,13 +25,12 @@ export default function AboutPage() {
 
         <section className="mx-auto max-w-6xl px-5 py-12 md:py-16">
           <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-              <h2 className="text-2xl font-bold text-[#0d2b55]">{t("about_mission_title")}</h2>
+            <div className="rounded-3xl border border-slate-200 bg-[#fffdf8] p-8 shadow-sm transition-all duration-200 hover:border-amber-200 hover:bg-amber-50 hover:shadow-md"><h2 className="text-2xl font-bold text-[#0d2b55]">{t("about_mission_title")}</h2>
               <p className="mt-4 text-base leading-8 text-slate-600">{t("about_mission_text")}</p>
               <p className="mt-4 text-base leading-8 text-slate-600">{t("about_mission_secondary")}</p>
             </div>
 
-            <aside className="rounded-3xl border border-amber-200 bg-amber-50 p-6 shadow-sm">
+            <aside className="rounded-3xl border border-slate-200 bg-[#fffdf8] p-6 shadow-sm transition-all duration-200 hover:border-amber-200 hover:bg-amber-50 hover:shadow-md">
               <h3 className="text-lg font-bold text-[#0d2b55]">{t("about_info_title")}</h3>
               <p className="mt-3 text-sm leading-7 text-slate-700">{t("about_info_1")}</p>
               <p className="mt-3 text-sm leading-7 text-slate-700">{t("about_info_2")}</p>
@@ -63,3 +62,6 @@ export default function AboutPage() {
     </MainLayout>
   );
 }
+
+
+

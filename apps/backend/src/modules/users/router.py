@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query, Response
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.config.database import get_db
 from src.middlewares.auth_middleware import get_current_user
@@ -25,8 +26,10 @@ async def change_my_password(
 
 
 @router.get("", response_model=list[UserOut], dependencies=[Depends(require_admin)])
-async def list_all_users(db: AsyncSession = Depends(get_db)):
-    return await service.list_users(db)
+async def list_all_users(response: Response, limit: int = Query(100, ge=1, le=200),
+                         offset: int = Query(0, ge=0), db: AsyncSession = Depends(get_db)):
+    response.headers["Cache-Control"] = "no-store"
+    return (await db.execute(select(User).order_by(User.created_at.desc()).limit(limit).offset(offset))).scalars().all()
 
 
 @router.post("", response_model=UserOut, status_code=201, dependencies=[Depends(require_admin)])

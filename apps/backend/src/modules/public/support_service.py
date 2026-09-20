@@ -31,13 +31,6 @@ class SupportDelivery(Base, TimestampMixin):
     status: Mapped[str] = mapped_column(String(20), default="queued")
 
 
-class WebsiteSms(Base, TimestampMixin):
-    __tablename__ = "website_sms_requests"
-    user_id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    last_requested: Mapped[datetime] = mapped_column()
-    status: Mapped[str] = mapped_column(String(20), default="pending")
-
-
 def queue_notifications(db, ticket_id, owner_email, event):
     """Called in the ticket transaction. No recipient addresses are returned to clients."""
     recipients = [(owner_email, event)]
@@ -82,10 +75,21 @@ async def deliver_notifications(delivery_ids):
             await db.commit()
 
 
-async def ticket_views(db, tickets):
+async def ticket_views(db, tickets, *, include_owner=False):
     if not tickets:
         return []
     ids = [ticket.id for ticket in tickets]
+    owners = {}
+    if include_owner:
+        from src.modules.users.models import User
+        owner_ids = []
+        for ticket in tickets:
+            try:
+                owner_ids.append(uuid.UUID(ticket.user_id))
+            except ValueError:
+                continue
+        for owner in (await db.execute(select(User).where(User.id.in_(owner_ids)))).scalars():
+            owners[str(owner.id)] = {"id": str(owner.id), "fullName": owner.full_name, "email": owner.email}
     replies = (await db.execute(select(SupportReply).where(SupportReply.ticket_id.in_(ids))
                                .order_by(SupportReply.created_at, SupportReply.id))).scalars().all()
     deliveries = (await db.execute(select(SupportDelivery).where(SupportDelivery.ticket_id.in_(ids))
@@ -93,6 +97,7 @@ async def ticket_views(db, tickets):
     def utc(value):
         return value.isoformat() + "Z" if value else None
     return [{"id": ticket.id, "subject": ticket.subject, "message": ticket.message,
+             **({"owner": owners.get(ticket.user_id)} if include_owner else {}),
              "status": ticket.status, "response": ticket.response,
              "created_at": utc(ticket.created_at), "updated_at": utc(ticket.updated_at),
              "replies": [{"id": reply.id, "author_role": reply.author_role, "message": reply.message,

@@ -1,4 +1,4 @@
-﻿"""Support workflows: isolated accounts, mocked delivery, no real email or SMS."""
+﻿"""Support workflows: isolated accounts, mocked delivery, no real email."""
 import os
 import sqlite3
 from unittest.mock import AsyncMock
@@ -16,7 +16,6 @@ def mock_delivery(monkeypatch):
     monkeypatch.setattr(email_client, "email_ready", lambda: True)
     monkeypatch.setattr(email_client, "send_email", sender)
     monkeypatch.setattr(settings, "SUPPORT_EMAIL", "helpdesk@example.com")
-    monkeypatch.setattr(settings, "SMS_PROVIDER", "msg91")
     return sender
 
 
@@ -69,50 +68,3 @@ def test_whitespace_ticket_is_rejected(client):
     response = client.post("/api/v1/citizen/tickets", headers=owner, json={"subject": "   ", "message": " " * 30})
     assert response.status_code == 422
 
-
-def provider(monkeypatch, succeeds=True):
-    sent = []
-    class Reply:
-        def raise_for_status(self):
-            pass
-        def json(self):
-            return {"type": "success" if succeeds else "error"}
-    class Provider:
-        def __init__(self, **kwargs):
-            pass
-        async def __aenter__(self):
-            return self
-        async def __aexit__(self, *args):
-            pass
-        async def post(self, url, **kwargs):
-            sent.append((url, kwargs["json"]))
-            return Reply()
-    monkeypatch.setattr(citizen.httpx, "AsyncClient", Provider)
-    monkeypatch.setattr(settings, "SMS_PROVIDER", "msg91")
-    monkeypatch.setattr(settings, "PUBLIC_SITE_URL", "https://schemesaathi.test")
-    for key, value in {"SMS_LIVE_ENABLED": True, "MSG91_AUTH_KEY": "fake-key", "MSG91_TEMPLATE_ID": "fake-flow", "MSG91_SENDER_ID": "TESTER"}.items():
-        monkeypatch.setattr(settings, key, value)
-    return sent
-
-
-def test_website_sms_is_gated_and_only_uses_account_phone(client, monkeypatch):
-    owner = new_account(client, 65)
-    endpoint = "/api/v1/citizen/website-sms"
-    assert client.post(endpoint, headers=owner).status_code == 503
-    sent = provider(monkeypatch)
-    response = client.post(endpoint, headers=owner, json={"mobile": "9999999999"})
-    assert response.status_code == 200 and response.json()["status"] == "provider_accepted"
-    assert sent[0][1]["recipients"] == [{"mobiles": "919876543265", "website": "https://schemesaathi.test"}]
-    assert client.post(endpoint, headers=owner).status_code == 429
-    assert len(sent) == 1
-    assert client.post(endpoint).status_code == 401
-
-
-def test_provider_rejection_is_not_reported_as_sent(client, monkeypatch):
-    owner = new_account(client, 66)
-    sent = provider(monkeypatch, succeeds=False)
-    endpoint = "/api/v1/citizen/website-sms"
-    assert client.post(endpoint, headers=owner).status_code == 502
-    assert client.post(endpoint, headers=owner).status_code == 429
-    assert len(sent) == 1
-    assert sql("SELECT status FROM website_sms_requests WHERE REPLACE(user_id,'-','')=(SELECT id FROM users WHERE email=?)", ("tester66@example.com",)) == [("failed",)]

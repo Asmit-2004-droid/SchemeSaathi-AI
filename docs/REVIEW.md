@@ -2,7 +2,7 @@
 
 ## Scope
 
-Reviewed the archive's React screens, frontend/backend API contracts, FastAPI startup and configuration, authentication, catalogue and eligibility engine, voice/provider clients, support/outreach paths, tests and deployment setup. The SIH alignment uses the user-supplied SIH26092 title and MoSJE description; the full official evaluation brief was not supplied or independently verified. Research notebooks and optional trained binaries were inventoried, not retrained or independently benchmarked.
+Reviewed the archive's React screens, frontend/backend API contracts, FastAPI startup and configuration, authentication, catalogue and eligibility engine, voice/provider clients, support/outreach paths, tests and deployment setup. The project alignment uses the user-supplied SchemeSaathi title and MoSJE description; the full official evaluation brief was not supplied or independently verified. Research notebooks and optional trained binaries were inventoried, not retrained or independently benchmarked.
 
 ## Findings and repairs
 
@@ -35,7 +35,7 @@ Legacy applications, beneficiary administration, telephony, OCR, analytics and o
 
 The 653-row source catalogue and derived rule table are not an authoritative current registry. Missing scheme conditions are not proof of eligibility. Clearly sector-specific scheme titles are also screened against the business activity; this is a heuristic rather than a complete eligibility rule. State inference is a conservative heuristic and cannot replace an explicit reviewed jurisdiction field. Income ranges are screened conservatively; detailed per-scheme rules, business stage, loan history, residence duration and document requirements can still affect the actual decision. Test failures must never be converted into claims of no eligible schemes.
 
-Scores are criterion coverage, not a calibrated AI confidence or approval probability. No precision/recall benchmark against expert-labelled cases was performed. Before an SIH final demo, prepare realistic SC, ST, OBC, women, disability and rural/urban examples and compare the suggested schemes against the current official guidelines.
+Scores are criterion coverage, not a calibrated AI confidence or approval probability. No precision/recall benchmark against expert-labelled cases was performed. Before an final demo, prepare realistic SC, ST, OBC, women, disability and rural/urban examples and compare the suggested schemes against the current official guidelines.
 
 Public rollout still needs verified phone ownership, account recovery/email verification, synchronized profiles if required, formal scheme-data curation, database migrations/backups, stronger operational audit logging, provider delivery receipts and load testing. Staff creation is a local administrative command. Keep legacy staff APIs disabled unless explicitly integrated and reviewed.
 
