@@ -79,3 +79,13 @@ states-source.html
 **/*service-account*.json*
 
 **/*.lnk
+
+# Local/test/backup files
+.test-tmp/
+.tmp_pytest/
+.pytest_cache/
+*.voice_bak
+*.voice_backup
+*.before_fix.bak
+*.backup.jsx
+*.patch
