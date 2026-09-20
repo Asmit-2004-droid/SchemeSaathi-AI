@@ -1,19 +1,31 @@
 // Capture mono PCM and resample to Bhashini's 16 kHz WAV input.
 export async function recordWav() {
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  const ctx = new AudioContext();
-  await ctx.resume();
-  const source = ctx.createMediaStreamSource(stream);
-  const node = ctx.createScriptProcessor(4096, 1, 1);
-  const mute = ctx.createGain(); mute.gain.value = 0;
+  let ctx, source, node, mute;
   const chunks = [];
-  node.onaudioprocess = e => chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
-  source.connect(node); node.connect(mute); mute.connect(ctx.destination);
+  const release = async () => {
+    try {
+      node?.disconnect(); source?.disconnect(); mute?.disconnect();
+    } finally {
+      stream.getTracks().forEach(track => track.stop());
+      if (ctx && ctx.state !== "closed") await ctx.close();
+    }
+  };
+  try {
+    ctx = new AudioContext();
+    await ctx.resume();
+    source = ctx.createMediaStreamSource(stream);
+    node = ctx.createScriptProcessor(4096, 1, 1);
+    mute = ctx.createGain(); mute.gain.value = 0;
+    node.onaudioprocess = e => chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+    source.connect(node); node.connect(mute); mute.connect(ctx.destination);
+  } catch (error) {
+    await release().catch(() => {});
+    throw error;
+  }
   return async () => {
-    node.disconnect(); source.disconnect(); mute.disconnect();
-    stream.getTracks().forEach(track => track.stop());
     const rate = ctx.sampleRate;
-    await ctx.close();
+    await release();
     const input = new Float32Array(chunks.reduce((n, chunk) => n + chunk.length, 0));
     let offset = 0; chunks.forEach(chunk => { input.set(chunk, offset); offset += chunk.length; });
     const count = Math.floor(input.length * 16000 / rate);

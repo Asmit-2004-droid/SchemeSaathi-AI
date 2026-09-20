@@ -44,7 +44,65 @@ async def _compute(task, language, input_data, **options):
 
 
 async def speech_to_text(audio_base64: str, source_language: str) -> dict:
-    result = await _compute("asr", {"sourceLanguage": source_language}, {"audio": [{"audioContent": audio_base64}]}, audioFormat="wav", samplingRate=16000)
+    # Current direct Inference API for English ASR.
+    if source_language == "en" and settings.BHASHINI_INFERENCE_API_KEY:
+        payload = {
+            "pipelineTasks": [{
+                "taskType": "asr",
+                "config": {
+                    "serviceId": settings.BHASHINI_ASR_SERVICE_ID,
+                    "language": {"sourceLanguage": "en"},
+                    "audioFormat": "wav",
+                    "samplingRate": 16000,
+                },
+            }],
+            "inputData": {
+                "audio": [{"audioContent": audio_base64}]
+            },
+        }
+
+        try:
+            async with httpx.AsyncClient(
+                timeout=httpx.Timeout(40, connect=10)
+            ) as client:
+                response = await client.post(
+                    settings.BHASHINI_INFERENCE_ENDPOINT,
+                    headers={
+                        "Accept": "*/*",
+                        "Authorization": settings.BHASHINI_INFERENCE_API_KEY,
+                        "Content-Type": "application/json",
+                    },
+                    json=payload,
+                )
+                response.raise_for_status()
+                data = response.json()
+
+            result = next(
+                item for item in data["pipelineResponse"]
+                if item["taskType"] == "asr"
+            )
+            text = result["output"][0]["source"]
+
+            if not isinstance(text, str) or not text.strip():
+                raise ValueError("Empty transcript")
+
+            return {"text": text.strip()}
+
+        except (httpx.HTTPError, KeyError, IndexError,
+                TypeError, ValueError, StopIteration):
+            raise HTTPException(
+                503,
+                "Bhashini ASR inference failed. Check the Inference API key or ASR service access."
+            )
+
+    # Existing pipeline retained for other configured languages.
+    result = await _compute(
+        "asr",
+        {"sourceLanguage": source_language},
+        {"audio": [{"audioContent": audio_base64}]},
+        audioFormat="wav",
+        samplingRate=16000,
+    )
     try:
         return {"text": result["output"][0]["source"]}
     except (KeyError, IndexError, TypeError):

@@ -3,10 +3,11 @@ import Tesseract from "tesseract.js";
 import { FiCamera, FiMic, FiPaperclip, FiSend, FiSquare, FiVolume2 } from "react-icons/fi";
 import Header from "../layout/Header";
 import FormattedText from "./FormattedText";
-import { api, sendAssistantMessage, sendAssistantMessageWithAttachment, synthesizeSpeech } from "../../lib/api";
+import { api, sendAssistantMessage, sendAssistantMessageWithAttachment, synthesizeSpeech, transcribeSpeech } from "../../lib/api";
 import { SPEECH_LANGUAGES, browserVoice, watchBrowserVoices, speechText } from "../../lib/speech";
 import { useLanguage, LANGUAGES } from "../../lib/i18n.jsx";
 import { getUserItem, getCurrentUserId } from "../../lib/userStorage";
+import { recordWav } from "../../lib/recordWav";
 import copy from "../../lib/chatCopy.json";
 import greetings from "../../lib/chatGreetings.json";
 
@@ -30,6 +31,7 @@ export default function AIAssistantPage() {
   const [sending, setSending] = useState(false);
   const [failed, setFailed] = useState(null);
   const [listening, setListening] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [imageError, setImageError] = useState("");
   const [voiceError, setVoiceError] = useState("");
@@ -39,13 +41,24 @@ export default function AIAssistantPage() {
   const logRef = useRef(null);
   const inputRef = useRef(null);
   const requestRef = useRef(null);
-  const recognitionRef = useRef(null);
+  const recordingRef = useRef(null);
   const galleryInputRef = useRef(null);
   const cameraInputRef = useRef(null);
   const audioRef = useRef(null);
   const speechRequestRef = useRef(null);
   const speechEpoch = useRef(0);
   const epoch = useRef(0);
+  const cancelVoiceInput = useCallback(() => {
+    const recording = recordingRef.current;
+    recordingRef.current = null;
+    if (recording) {
+      clearTimeout(recording.timer);
+      recording.controller.abort();
+      recording.stop?.().catch(() => {});
+    }
+    setListening(false);
+    setTranscribing(false);
+  }, []);
   const stopPlayback = useCallback(() => {
     speechEpoch.current++;
     speechRequestRef.current?.abort();
@@ -71,12 +84,9 @@ export default function AIAssistantPage() {
   }, []);
   useEffect(() => () => {
     // Prevent old-language recordings or delayed audio from appearing after a switch.
-    const recognition = recognitionRef.current;
-    recognitionRef.current = null;
-    recognition?.abort();
-    setListening(false);
+    cancelVoiceInput();
     stopPlayback();
-  }, [language, stopPlayback]);
+  }, [language, stopPlayback, cancelVoiceInput]);
   useEffect(() => {
     try { sessionStorage.setItem(historyKey(), JSON.stringify(messages.slice(-40))); } catch { /* Storage is optional. */ }
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
@@ -84,13 +94,13 @@ export default function AIAssistantPage() {
   useEffect(() => () => {
     epoch.current++;
     requestRef.current?.abort();
-    recognitionRef.current?.abort();
+    cancelVoiceInput();
     stopPlayback();
-  }, [stopPlayback]);
+  }, [stopPlayback, cancelVoiceInput]);
 
   function newChat() {
     epoch.current++; requestRef.current?.abort(); requestRef.current = null;
-    recognitionRef.current?.abort(); recognitionRef.current = null; setListening(false);
+    cancelVoiceInput();
     stopPlayback();
     setMessages([]); setMessage(""); setFailed(null); setSending(false); setSelectedImage(null); setImageError(""); setVoiceError(""); setSpeakingIndex(null);
     sessionStorage.removeItem(historyKey()); inputRef.current?.focus();
@@ -131,43 +141,59 @@ export default function AIAssistantPage() {
     }
   }
 
-  function startVoiceInput() {
-    if (recognitionRef.current) return;
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setVoiceError("assistant_voice_input_unavailable");
+  async function finishVoiceInput(recording) {
+    if (recordingRef.current !== recording || !recording.stop) return;
+    clearTimeout(recording.timer);
+    const stop = recording.stop;
+    recording.stop = null;
+    setListening(false);
+    setTranscribing(true);
+    try {
+      const audio = await stop();
+      if (recordingRef.current !== recording) return;
+      const data = await transcribeSpeech(audio, recording.language, recording.controller.signal);
+      if (recordingRef.current !== recording) return;
+      const transcript = typeof data.transcript === "string" ? data.transcript.trim() : "";
+      if (!transcript) throw new Error("No speech received");
+      setMessage(prev => {
+        const addition = (prev && !/\s$/.test(prev) ? " " : "") + transcript;
+        return prev + addition.slice(0, Math.max(0, 2000 - prev.length));
+      });
+      inputRef.current?.focus();
+    } catch {
+      if (recordingRef.current === recording) setVoiceError("assistant_voice_input_failed");
+    } finally {
+      if (recordingRef.current === recording) {
+        recordingRef.current = null;
+        setTranscribing(false);
+      }
+    }
+  }
+
+  async function startVoiceInput() {
+    if (recordingRef.current) {
+      if (recordingRef.current.stop) await finishVoiceInput(recordingRef.current);
+      else cancelVoiceInput();
       return;
     }
-    const recognition = new SpeechRecognition();
-    recognition.lang = SPEECH_LANGUAGES[language].locale;
-    recognition.interimResults = false;
-    recognition.continuous = false;
-    recognitionRef.current = recognition;
+    const recording = { controller: new AbortController(), language, stop: null, timer: null };
+    recordingRef.current = recording;
     setVoiceError("");
-    recognition.onstart = () => { if (recognitionRef.current === recognition) setListening(true); };
-    recognition.onresult = (event) => {
-      if (recognitionRef.current !== recognition) return;
-      const transcript = Array.from(event.results)
-        .map(result => result[0]?.transcript || "")
-        .join(" ")
-        .trim();
-      if (transcript) setMessage(prev => (prev ? `${prev} ${transcript}`.trim() : transcript));
-    };
-    recognition.onerror = (event) => {
-      if (recognitionRef.current !== recognition || event.error === "aborted") return;
-      setListening(false);
-      setVoiceError(["not-allowed", "service-not-allowed"].includes(event.error)
-        ? "assistant_voice_permission" : event.error === "language-not-supported"
-          ? "assistant_voice_language_unavailable" : "assistant_voice_input_failed");
-    };
-    recognition.onend = () => {
-      if (recognitionRef.current !== recognition) return;
-      setListening(false);
-      recognitionRef.current = null;
-    };
+    setListening(true);
     stopPlayback();
-    try { recognition.start(); }
-    catch { recognitionRef.current = null; setListening(false); setVoiceError("assistant_voice_input_failed"); }
+    try {
+      const stop = await recordWav();
+      // Permission can resolve after navigation, a language change or cancellation.
+      if (recordingRef.current !== recording) { await stop(); return; }
+      recording.stop = stop;
+      recording.timer = setTimeout(() => { void finishVoiceInput(recording); }, 40000);
+    } catch {
+      if (recordingRef.current === recording) {
+        recordingRef.current = null;
+        setListening(false);
+        setVoiceError("assistant_voice_input_failed");
+      }
+    }
   }
 
   async function playReply(entry, index) {
@@ -313,7 +339,7 @@ export default function AIAssistantPage() {
             <textarea id="assistant-question" ref={inputRef} value={message} maxLength={2000} rows={2} onChange={e => setMessage(e.target.value)} onKeyDown={e => {if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {e.preventDefault(); send();}}} placeholder={ui.placeholder} className="block min-h-16 w-full resize-none border-0 bg-transparent px-3 py-2 font-normal leading-6 outline-none" />
             <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-1 pt-2">
               <div className="flex items-center gap-1">
-                <button type="button" data-testid="assistant-microphone" onClick={listening ? () => recognitionRef.current?.stop() : startVoiceInput} disabled={sending} className={`inline-flex h-10 w-10 items-center justify-center rounded-full transition disabled:opacity-40 ${listening ? "bg-[#d7aa2d] text-[#0d2b55]" : "text-[#0d2b55] hover:bg-[#fff3ca]"}`} title={t(listening ? "assistant_voice_stop_listening" : "assistant_voice_mic")} aria-label={t(listening ? "assistant_voice_stop_listening" : "assistant_voice_mic")}>{listening ? <FiSquare size={17} /> : <FiMic size={19} />}</button>
+                <button type="button" data-testid="assistant-microphone" onClick={startVoiceInput} disabled={(sending && !listening) || transcribing} className={`inline-flex h-10 w-10 items-center justify-center rounded-full transition disabled:opacity-40 ${listening ? "bg-[#d7aa2d] text-[#0d2b55]" : "text-[#0d2b55] hover:bg-[#fff3ca]"}`} title={t(listening ? "assistant_voice_stop_listening" : "assistant_voice_mic")} aria-label={t(listening ? "assistant_voice_stop_listening" : "assistant_voice_mic")}>{listening ? <FiSquare size={17} /> : <FiMic size={19} />}</button>
                 <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[#0d2b55] transition hover:bg-[#fff3ca]" title={t("assistant_attachment_add")} aria-label={t("assistant_attachment_add")} onClick={() => galleryInputRef.current?.click()}><FiPaperclip size={19} /></button>
                 <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[#0d2b55] transition hover:bg-[#fff3ca]" title={t("assistant_attachment_camera")} aria-label={t("assistant_attachment_camera")} onClick={() => cameraInputRef.current?.click()}><FiCamera size={19} /></button>
                 {listening && <span className="ml-2 text-xs font-medium text-[#0d2b55]">{t("assistant_voice_listening")}</span>}

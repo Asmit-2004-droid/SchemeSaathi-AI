@@ -30,6 +30,14 @@ export async function sendAssistantMessage(message, history = [], phoneNumber = 
   return response.data;
 }
 
+export async function transcribeSpeech(audioBase64, language = "en", signal) {
+  const response = await api.post("/public/voice/transcribe", {
+    audio_base64: audioBase64,
+    language,
+  }, { timeout: 60000, signal });
+  return response.data;
+}
+
 export async function synthesizeSpeech(text, language = "en", signal) {
   const response = await api.post("/public/voice/tts", {
     text,

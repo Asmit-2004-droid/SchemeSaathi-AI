@@ -74,6 +74,9 @@ class Settings(BaseSettings):
     BHASHINI_PIPELINE_ID: str = "64392f96daac500b55c543cd"
     BHASHINI_CONFIG_ENDPOINT: str = "https://meity-auth.ulcacontrib.org/ulca/apis/v0/model/getModelsPipeline"
     BHASHINI_DEFAULT_LANGUAGE: str = "hi"
+    BHASHINI_INFERENCE_API_KEY: str = ""
+    BHASHINI_ASR_SERVICE_ID: str = "ai4bharat/whisper-medium-en--gpu--t4"
+    BHASHINI_INFERENCE_ENDPOINT: str = "https://dhruva-api.bhashini.gov.in/services/inference/pipeline"
 
     AWS_S3_BUCKET: str = ""
     AWS_ACCESS_KEY_ID: str = ""

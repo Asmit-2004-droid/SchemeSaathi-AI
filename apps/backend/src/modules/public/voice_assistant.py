@@ -16,6 +16,10 @@ class VoiceInput(BaseModel):
     audio_base64: str | None = Field(default=None, max_length=3000000)
     text: str | None = Field(default=None, max_length=2000)
 
+class TranscriptionInput(BaseModel):
+    language: str = "hi"
+    audio_base64: str = Field(min_length=1, max_length=3000000)
+
 class TTSInput(BaseModel):
     language: str = "hi"
     text: str = Field(min_length=1, max_length=2500)
@@ -40,6 +44,29 @@ async def text_to_speech(request: Request, payload: TTSInput):
     audio = await bhashini_client.text_to_speech(spoken[:2500], payload.language)
     return {"audio_base64": audio, "audio_mime_type": "audio/wav", "provider": "bhashini"}
 
+def validate_wav(audio_base64: str):
+    try:
+        audio = base64.b64decode(audio_base64, validate=True)
+        with wave.open(io.BytesIO(audio)) as wav:
+            if wav.getnchannels() != 1 or wav.getsampwidth() != 2 or wav.getframerate() != 16000 or not 0 < wav.getnframes() <= 16000 * 45:
+                raise ValueError()
+    except (ValueError, wave.Error, EOFError):
+        raise HTTPException(422, "Use mono 16-bit PCM WAV at 16000 Hz, maximum 45 seconds")
+
+@router.post("/transcribe")
+@limiter.limit("10/minute")
+async def transcribe(request: Request, payload: TranscriptionInput):
+    if payload.language not in LANGUAGES:
+        raise HTTPException(422, "Unsupported language")
+    if not bhashini_client.configured():
+        raise HTTPException(503, "Bhashini is not configured")
+    validate_wav(payload.audio_base64)
+    result = await bhashini_client.speech_to_text(payload.audio_base64, payload.language)
+    transcript = result.get("text")
+    if not isinstance(transcript, str) or not transcript.strip():
+        raise HTTPException(422, "No speech received")
+    return {"transcript": transcript}
+
 @router.post("/chat")
 @limiter.limit("10/minute")
 async def voice_chat(request: Request, payload: VoiceInput):
@@ -49,13 +76,7 @@ async def voice_chat(request: Request, payload: VoiceInput):
         raise HTTPException(503, "Bhashini is not configured. Use the text assistant or browser voice mode.")
     transcript = payload.text
     if payload.audio_base64:
-        try:
-            audio = base64.b64decode(payload.audio_base64, validate=True)
-            with wave.open(io.BytesIO(audio)) as wav:
-                if wav.getnchannels() != 1 or wav.getsampwidth() != 2 or wav.getframerate() != 16000 or not 0 < wav.getnframes() <= 16000 * 45:
-                    raise ValueError()
-        except (ValueError, wave.Error, EOFError):
-            raise HTTPException(422, "Use mono 16-bit PCM WAV at 16000 Hz, maximum 45 seconds")
+        validate_wav(payload.audio_base64)
         transcript = (await bhashini_client.speech_to_text(payload.audio_base64, payload.language))["text"]
     if not transcript or not transcript.strip():
         raise HTTPException(422, "No speech or text received")
