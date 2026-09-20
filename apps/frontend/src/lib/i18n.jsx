@@ -12,13 +12,13 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 
 export const LANGUAGES = [
   { code: "en", label: "English" },
-  { code: "hi", label: "à¤¹à¤¿à¤‚à¤¦à¥€ (Hindi)" },
-  { code: "mr", label: "à¤®à¤°à¤¾à¤ à¥€ (Marathi)" },
-  { code: "gu", label: "àª—à«àªœàª°àª¾àª¤à«€ (Gujarati)" },
-  { code: "ta", label: "à®¤à®®à®¿à®´à¯ (Tamil)" },
-  { code: "te", label: "à°¤à±†à°²à±à°—à± (Telugu)" },
-  { code: "bn", label: "à¦¬à¦¾à¦‚à¦²à¦¾ (Bengali)" },
-  { code: "kn", label: "à²•à²¨à³à²¨à²¡ (Kannada)" },
+  { code: "hi", label: "हिंदी (Hindi)" },
+  { code: "mr", label: "मराठी (Marathi)" },
+  { code: "gu", label: "ગુજરાતી (Gujarati)" },
+  { code: "ta", label: "தமிழ் (Tamil)" },
+  { code: "te", label: "తెలుగు (Telugu)" },
+  { code: "bn", label: "বাংলা (Bengali)" },
+  { code: "kn", label: "ಕನ್ನಡ (Kannada)" },
 ];
 
 const STORAGE_KEY = "schemeSaathiLanguage";

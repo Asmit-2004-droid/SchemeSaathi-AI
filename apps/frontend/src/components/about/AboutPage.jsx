@@ -4,10 +4,10 @@ import { useLanguage } from "../../lib/i18n.jsx";
 export default function AboutPage() {
   const { t } = useLanguage();
   const steps = [
-    { key: "about_step_profile", label: t("about_step_profile") },
-    { key: "about_step_business", label: t("about_step_business") },
-    { key: "about_step_other", label: t("about_step_other") },
-    { key: "about_step_matches", label: t("about_step_matches") },
+    { key: "about_step_profile", label: t("about_step_profile"), description: t("Basic profile details used for relevant eligibility screening.") },
+    { key: "about_step_business", label: t("about_step_business"), description: t("Business type, activity and stage help refine scheme matches.") },
+    { key: "about_step_other", label: t("about_step_other"), description: t("Additional financial/requirement information improves relevance.") },
+    { key: "about_step_matches", label: t("about_step_matches"), description: t("Receive suitable schemes with eligibility, benefits and next steps.") },
   ];
 
   return (
@@ -44,6 +44,7 @@ export default function AboutPage() {
                 <div key={step.key} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0d2b55] text-sm font-bold text-white">{index + 1}</div>
                   <h3 className="mt-4 text-lg font-semibold text-[#0d2b55]">{step.label}</h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">{step.description}</p>
                 </div>
               ))}
             </div>

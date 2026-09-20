@@ -1,9 +1,11 @@
+import { saveSchemeProfileSection } from "../../lib/schemeProfile";
+import { apiError } from "../../lib/api";
 import React, { useState } from "react";
 import ProgressSteps from "./ProgressSteps";
 import WhyAskCard from "./WhyAskCard";
 import { MainLayout } from "../layout";
 import { STATES, getDistrictsForState } from "../../lib/statesDistricts";
-import { getUserItem, setUserItem } from "../../lib/userStorage";
+import { getUserItem } from "../../lib/userStorage";
 import { useLanguage } from "../../lib/i18n.jsx";
 
 /* ====== INITIAL FORM ====== */
@@ -60,7 +62,7 @@ function getLoggedInAccount() {
 function getSavedPersonalInfo() {
   const saved = getUserItem("schemeSaathiPersonalDetails");
 
-  if (saved) {
+  if (saved && Object.keys(saved).length) {
     return { ...initialForm, ...saved };
   }
 
@@ -78,6 +80,8 @@ function getSavedPersonalInfo() {
 
 export default function PersonalInfoPage() {
   const { t } = useLanguage();
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const isEditMode =
     sessionStorage.getItem("schemeSaathiEditMode") === "personal";
 
@@ -150,8 +154,10 @@ export default function PersonalInfoPage() {
 
   /* ====== CONTINUE ====== */
 
-  const handleContinue = (e) => {
+  const handleContinue = async (e) => {
     e.preventDefault();
+    if (saving) return;
+    setSaveError("");
 
     if (!validateForm()) {
       return;
@@ -161,7 +167,9 @@ export default function PersonalInfoPage() {
     sessionStorage.getItem("schemeSaathiEditMode") ===
     "personal";
 
-    setUserItem("schemeSaathiPersonalDetails", form);
+    setSaving(true);
+    try { await saveSchemeProfileSection("personal", form); }
+    catch (error) { setSaveError(apiError(error)); setSaving(false); return; }
 
     sessionStorage.removeItem("schemeSaathiEditMode");
 
@@ -223,7 +231,7 @@ export default function PersonalInfoPage() {
                 onSubmit={handleContinue}
               >
 
-                <div className="grid gap-x-5 gap-y-5 sm:grid-cols-2">
+                <fieldset disabled={saving} className="contents"><div className="grid gap-x-5 gap-y-5 sm:grid-cols-2">
 
                   {/* FULL NAME */}
 
@@ -307,6 +315,9 @@ export default function PersonalInfoPage() {
                   />
 
                 </div>
+              </fieldset>
+                {saveError && <p role="alert" className="mt-4 text-sm text-red-700">{saveError}</p>}
+                {saving && <p role="status" className="mt-4 text-sm text-slate-600">{t("Saving your details?")}</p>}
               </form>
 
             </section>
@@ -335,6 +346,7 @@ export default function PersonalInfoPage() {
 
             <button
               type="submit"
+              disabled={saving}
               form="personal-info-form"
               className="h-11 w-full rounded-lg bg-[#0d2b55] px-8 text-[13px] font-medium text-white shadow-sm transition hover:bg-[#173b70] active:scale-[0.99] sm:w-58"
             >

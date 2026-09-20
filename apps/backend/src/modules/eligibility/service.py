@@ -22,10 +22,10 @@ def _normalize_key(text: str) -> str:
     return " ".join(str(text).casefold().split())
 
 
-def _parse_income(val: Any) -> float:
+def _parse_income(val: Any) -> Optional[float]:
     """Parses various income formats (numeric or human-readable ranges)."""
-    if val is None or val == "":
-        return 200000.0
+    if val is None or (isinstance(val, str) and not val.strip()):
+        return None
     if isinstance(val, (int, float)):
         return float(val)
 
@@ -189,6 +189,7 @@ class EligibilityService:
 
         matched_conditions = item.get("Matched Conditions", [])
         failed_conditions = item.get("Failed Conditions", [])
+        unknown_conditions = item.get("Unknown Conditions", [])
         match_score = item.get("Match Score", 0.0)
         confidence = item.get("Confidence", "Medium")
         is_eligible = item.get("Eligible", False)
@@ -198,6 +199,8 @@ class EligibilityService:
         explanation = f"Passes the recorded checks for {matched_str}. Additional conditions in the official guidelines may apply."
         if failed_conditions:
             explanation += f" Did not meet: {', '.join(failed_conditions)}."
+        if unknown_conditions:
+            explanation += f" Eligibility is conditional: provide {', '.join(unknown_conditions).lower()} to check the remaining requirement."
 
         # Required docs
         raw_docs = doc.get("documents", "")
@@ -228,6 +231,7 @@ class EligibilityService:
             "matched_conditions": matched_conditions,
             "unmatched_conditions": failed_conditions,
             "failed_conditions": failed_conditions,
+            "unknown_conditions": unknown_conditions,
             "explanation": explanation,
             "detailed_explanation": item.get("Explanation", {}),
             "official_source_url": official_url,
@@ -241,7 +245,7 @@ class EligibilityService:
         normalized = self.normalize_profile(raw_profile)
         if not 1 <= normalized["Age"] <= 120:
             raise ValueError("Age outside supported range")
-        if normalized["Income"] < 0:
+        if normalized["Income"] is not None and normalized["Income"] < 0:
             raise ValueError("Income cannot be negative")
         if normalized["State"] not in self.locations:
             raise ValueError("Select a valid Indian state")
@@ -249,10 +253,12 @@ class EligibilityService:
             raise ValueError("District does not belong to the selected state")
         logger.info("evaluating_eligibility")
 
-        if eligible_only:
+        if eligible_only and normalized["Income"] is not None:
             results = self.engine.eligible_schemes(normalized)
         else:
             results = self.engine.recommend(normalized, top_n=len(self.engine.df))
+            if eligible_only:
+                results = [result for result in results if not result["Failed Conditions"]]
 
         # Restrict clearly sector-specific schemes when the source table says ANY.
         activity = " ".join(str(raw_profile.get(k) or "") for k in ("occupation", "business_type", "businessActivity")).lower()

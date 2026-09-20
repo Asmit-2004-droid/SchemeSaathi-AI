@@ -70,6 +70,8 @@ class EligibilityEngine:
 
             "Failed Conditions": result["failed"],
 
+            "Unknown Conditions": result["unknown"],
+
             "Explanation": explanation,
 
             "Notes": scheme.get("Notes", "")

@@ -1,9 +1,11 @@
+import { saveSchemeProfileSection } from "../../lib/schemeProfile";
+import { apiError } from "../../lib/api";
 import React, { useState } from "react";
 import { useLanguage } from "../../lib/i18n.jsx";
 import ProgressSteps from "./ProgressSteps";
 import WhyAskCard from "./WhyAskCard";
 import { MainLayout } from "../layout";
-import { getUserItem, setUserItem } from "../../lib/userStorage";
+import { getUserItem } from "../../lib/userStorage";
 
 const initialForm = {
   businessType: "",
@@ -64,6 +66,8 @@ function loadBusinessData() {
 
 export default function BusinessDetailsPage() {
   const { t } = useLanguage();
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const editMode =
     sessionStorage.getItem("schemeSaathiEditMode");
 
@@ -82,22 +86,24 @@ export default function BusinessDetailsPage() {
     }));
   };
 
-  const handleContinue = (e) => {
+  const handleContinue = async (e) => {
     e.preventDefault();
+    if (saving) return;
+    setSaveError("");
 
     if (
       !form.businessType ||
       !form.businessActivity.trim() ||
       !form.businessStage ||
-      !form.yearsInBusiness ||
-      !form.annualTurnover ||
-      !form.numberOfEmployees
+      !form.yearsInBusiness
     ) {
       alert("Please complete all business details.");
       return;
     }
 
-    setUserItem("schemeSaathiBusinessDetails", form);
+    setSaving(true);
+    try { await saveSchemeProfileSection("business", form); }
+    catch (error) { setSaveError(apiError(error)); setSaving(false); return; }
 
     const cameFromEdit = isEditMode;
 
@@ -141,7 +147,7 @@ export default function BusinessDetailsPage() {
                 id="business-form"
                 onSubmit={handleContinue}
               >
-                <div className="grid gap-x-5 gap-y-5 sm:grid-cols-2">
+                <fieldset disabled={saving} className="contents"><div className="grid gap-x-5 gap-y-5 sm:grid-cols-2">
                   <FormSelect
                     label={t("Business Type")}
                     name="businessType"
@@ -178,8 +184,9 @@ export default function BusinessDetailsPage() {
                   />
 
                   <FormSelect
-                    label={t("Annual Turnover")}
+                    label={t("Annual Turnover (optional)")}
                     name="annualTurnover"
+                    optional
                     placeholder={t("Select Range")}
                     value={form.annualTurnover}
                     onChange={handleChange}
@@ -187,14 +194,18 @@ export default function BusinessDetailsPage() {
                   />
 
                   <FormSelect
-                    label={t("Number of Employees")}
+                    label={t("Number of Employees/Workers (optional)")}
                     name="numberOfEmployees"
+                    optional
                     placeholder={t("Select Range")}
                     value={form.numberOfEmployees}
                     onChange={handleChange}
                     options={employeeOptions}
                   />
                 </div>
+              </fieldset>
+                {saveError && <p role="alert" className="mt-4 text-sm text-red-700">{saveError}</p>}
+                {saving && <p role="status" className="mt-4 text-sm text-slate-600">{t("Saving your details?")}</p>}
               </form>
             </section>
 
@@ -212,6 +223,7 @@ export default function BusinessDetailsPage() {
 
             <button
               type="submit"
+              disabled={saving}
               form="business-form"
               className="h-11 w-full rounded-lg bg-[#0d2b55] px-8 text-[13px] font-medium text-white shadow-sm transition hover:bg-[#173b70] sm:w-58"
             >
@@ -256,6 +268,7 @@ function FormSelect({
   value,
   onChange,
   options,
+  optional = false,
 }) {
   const { t } = useLanguage();
   return (
@@ -272,7 +285,7 @@ function FormSelect({
           value ? "text-slate-700" : "text-slate-400"
         }`}
       >
-        <option value="" disabled>
+        <option value="" disabled={!optional}>
           {placeholder}
         </option>
 

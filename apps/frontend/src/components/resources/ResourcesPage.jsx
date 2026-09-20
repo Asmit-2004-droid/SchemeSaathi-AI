@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { MainLayout } from "../layout";
 import { useLanguage } from "../../lib/i18n.jsx";
 
@@ -19,6 +19,21 @@ export default function ResourcesPage() {
   const [category, setCategory] = useState("all");
   const [selected, setSelected] = useState(null);
   const [checked, setChecked] = useState([]);
+  const guideRef = useRef(null);
+
+  useEffect(() => {
+    if (!selected) return;
+    const dialog = guideRef.current;
+    const trigger = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    dialog.showModal();
+    document.body.style.overflow = "hidden";
+    return () => {
+      dialog.close();
+      document.body.style.overflow = previousOverflow;
+      if (trigger instanceof HTMLElement && trigger.isConnected) trigger.focus();
+    };
+  }, [selected]);
 
   const filtered = useMemo(() => {
     return resources.filter((resource) => {
@@ -94,10 +109,33 @@ export default function ResourcesPage() {
         </div>
 
         {selected && (
-          <section aria-labelledby="resource-title" className="mt-10 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <dialog
+            ref={guideRef}
+            aria-labelledby="resource-title"
+            onCancel={() => setSelected(null)}
+            onKeyDown={(event) => {
+              if (event.key !== "Tab") return;
+              const controls = event.currentTarget.querySelectorAll("button:not(:disabled), a[href], input:not(:disabled)");
+              const first = controls[0];
+              const last = controls[controls.length - 1];
+              if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+              } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
+              }
+            }}
+            onClick={(event) => {
+              if (event.target !== event.currentTarget) return;
+              const bounds = event.currentTarget.getBoundingClientRect();
+              if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) setSelected(null);
+            }}
+            className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-3xl overflow-y-auto overscroll-contain rounded-3xl border border-slate-200 bg-white p-5 shadow-xl backdrop:bg-slate-950/60 sm:p-6"
+          >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 id="resource-title" className="text-2xl font-bold text-[#0d2b55]">{t(selected.titleKey)}</h2>
-              <button type="button" className="text-sm font-semibold underline text-[#0d2b55]" onClick={() => setSelected(null)}>{t("resources_close")}</button>
+              <button type="button" className="inline-flex items-center gap-2 rounded-lg p-2 text-sm font-semibold underline text-[#0d2b55]" onClick={() => setSelected(null)}><span aria-hidden="true" className="text-xl">&times;</span>{t("resources_close")}</button>
             </div>
             <p className="mt-4 text-base leading-8 text-slate-600">{t(selected.descriptionKey)}</p>
 
@@ -128,7 +166,7 @@ export default function ResourcesPage() {
             <a href={selected.url} target="_blank" rel="noopener noreferrer" className="mt-6 inline-flex items-center rounded-xl bg-[#0d2b55] px-4 py-3 text-sm font-semibold text-white">
               {t("resources_open_official")}
             </a>
-          </section>
+          </dialog>
         )}
       </main>
     </MainLayout>

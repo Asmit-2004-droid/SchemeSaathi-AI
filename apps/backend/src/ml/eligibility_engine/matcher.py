@@ -70,6 +70,10 @@ class EligibilityMatcher:
 
         minimum, maximum = parse_income(rule)
 
+        if income is None:
+            # The parser uses this range when no income restriction is recorded.
+            return True if (minimum, maximum) == (0, 999999999) else None
+
         if minimum <= income <= maximum:
             return True
 
@@ -206,6 +210,8 @@ class EligibilityMatcher:
 
         failed = []
 
+        unknown = []
+
         # AGE
         if self.match_age(
                 user["Age"],
@@ -218,9 +224,15 @@ class EligibilityMatcher:
             failed.append("Age")
 
         # INCOME
-        if self.match_income(
+        income_match = self.match_income(
                 user["Income"],
-                scheme["Max Income"]):
+                scheme["Max Income"])
+
+        if income_match is None:
+
+            unknown.append("Income")
+
+        elif income_match:
 
             matched.append("Income")
 
@@ -302,7 +314,9 @@ class EligibilityMatcher:
 
             "failed": failed,
 
-            "eligible": len(failed) == 0,
+            "unknown": unknown,
+
+            "eligible": len(failed) == 0 and len(unknown) == 0,
 
             "matched_count": len(matched),
 

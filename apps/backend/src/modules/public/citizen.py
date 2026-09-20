@@ -3,7 +3,7 @@ import uuid
 from typing import Literal
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, BackgroundTasks, Query
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator, field_validator
 from sqlalchemy import String, Text, select, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Mapped, mapped_column
@@ -37,8 +37,13 @@ class CaptchaInput(BaseModel):
 class Register(CaptchaInput):
     full_name: str = Field(min_length=2, max_length=100)
     email: EmailStr
-    mobile: str = Field(pattern=r"^[6-9]\d{9}$")
+    mobile: str | None = Field(default=None, pattern=r"^[6-9]\d{9}$")
     password: str = Field(min_length=10, max_length=128)
+
+    @field_validator("mobile", mode="before")
+    @classmethod
+    def optional_mobile(cls, value):
+        return value.strip() or None if isinstance(value, str) else value
 
 class Login(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -80,7 +85,10 @@ async def captcha(request: Request, response: Response, db: AsyncSession = Depen
 @limiter.limit("5/minute")
 async def register(request: Request, payload: Register, db: AsyncSession = Depends(get_db)):
     await recovery.verify_captcha(db, payload.captcha_id, payload.captcha_answer)
-    existing = (await db.execute(select(User.id).where(or_(User.email == str(payload.email).lower(), User.mobile == payload.mobile)).limit(1))).scalar_one_or_none()
+    contacts = [User.email == str(payload.email).lower()]
+    if payload.mobile is not None:
+        contacts.append(User.mobile == payload.mobile)
+    existing = (await db.execute(select(User.id).where(or_(*contacts)).limit(1))).scalar_one_or_none()
     if existing:
         raise HTTPException(409, "Already registered. An account with this email or mobile number exists. Sign in or reset your password.")
     user = User(full_name=payload.full_name.strip(), email=str(payload.email).lower(), mobile=payload.mobile,
@@ -253,3 +261,7 @@ async def followup(request: Request, ticket_id: str, payload: TicketFollowup, ba
     await db.refresh(ticket)
     background_tasks.add_task(support_service.deliver_notifications, deliveries)
     return (await support_service.ticket_views(db, [ticket]))[0]
+
+
+from src.modules.public import scheme_profile
+router.include_router(scheme_profile.router)

@@ -1,9 +1,11 @@
+import { saveSchemeProfileSection } from "../../lib/schemeProfile";
+import { apiError } from "../../lib/api";
 import React, { useState } from "react";
 import { useLanguage } from "../../lib/i18n.jsx";
 import ProgressSteps from "./ProgressSteps";
 import WhyAskCard from "./WhyAskCard";
 import { MainLayout } from "../layout";
-import { getUserItem, setUserItem } from "../../lib/userStorage";
+import { getUserItem } from "../../lib/userStorage";
 
 const initialForm = {
   annualIncome: "",
@@ -57,6 +59,8 @@ function loadOtherData() {
 
 export default function OtherDetailsPage() {
   const { t } = useLanguage();
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const editMode =
     sessionStorage.getItem("schemeSaathiEditMode");
 
@@ -74,11 +78,12 @@ export default function OtherDetailsPage() {
     }));
   };
 
-  const handleContinue = (e) => {
+  const handleContinue = async (e) => {
     e.preventDefault();
+    if (saving) return;
+    setSaveError("");
 
     if (
-      !form.annualIncome ||
       !form.registeredBusiness ||
       !form.fundingRequired ||
       !form.preferredSupport ||
@@ -89,7 +94,9 @@ export default function OtherDetailsPage() {
       return;
     }
 
-    setUserItem("schemeSaathiOtherDetails", form);
+    setSaving(true);
+    try { await saveSchemeProfileSection("other", form); }
+    catch (error) { setSaveError(apiError(error)); setSaving(false); return; }
 
     sessionStorage.removeItem("schemeSaathiEditMode");
 
@@ -127,10 +134,11 @@ export default function OtherDetailsPage() {
                 id="other-form"
                 onSubmit={handleContinue}
               >
-                <div className="grid gap-x-5 gap-y-5 sm:grid-cols-2">
+                <fieldset disabled={saving} className="contents"><div className="grid gap-x-5 gap-y-5 sm:grid-cols-2">
                   <FormSelect
-                    label={t("Annual Income")}
+                    label={t("Annual Income (optional)")}
                     name="annualIncome"
+                    optional
                     placeholder={t("Select Income Range")}
                     value={form.annualIncome}
                     onChange={handleChange}
@@ -182,6 +190,9 @@ export default function OtherDetailsPage() {
                     options={schemeTypeOptions}
                   />
                 </div>
+              </fieldset>
+                {saveError && <p role="alert" className="mt-4 text-sm text-red-700">{saveError}</p>}
+                {saving && <p role="status" className="mt-4 text-sm text-slate-600">{t("Saving your details?")}</p>}
               </form>
             </section>
 
@@ -199,6 +210,7 @@ export default function OtherDetailsPage() {
 
             <button
               type="submit"
+              disabled={saving}
               form="other-form"
               className="h-11 w-full rounded-lg bg-[#0d2b55] px-8 text-[13px] font-medium text-white shadow-sm transition hover:bg-[#173b70] sm:w-58"
             >
@@ -218,6 +230,7 @@ function FormSelect({
   value,
   onChange,
   options,
+  optional = false,
 }) {
   const { t } = useLanguage();
   return (
@@ -234,7 +247,7 @@ function FormSelect({
           value ? "text-slate-700" : "text-slate-400"
         }`}
       >
-        <option value="" disabled>
+        <option value="" disabled={!optional}>
           {placeholder}
         </option>
 

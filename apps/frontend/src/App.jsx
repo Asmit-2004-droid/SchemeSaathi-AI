@@ -1,3 +1,4 @@
+import SavedSchemeProfile from "./components/findSchemes/SavedSchemeProfile";
 import React, { useEffect, useState } from "react";
 
 import { HomePage } from "./components/home";
@@ -85,26 +86,26 @@ export default function App() {
     path === "/find-schemes" ||
     path === "/find-schemes/personal-info"
   ) {
-    return <PersonalInfoPage />;
+    return <SavedSchemeProfile><PersonalInfoPage /></SavedSchemeProfile>;
   }
 
   if (path === "/find-schemes/business-details") {
-    return <BusinessDetailsPage />;
+    return <SavedSchemeProfile><BusinessDetailsPage /></SavedSchemeProfile>;
   }
 
   if (path === "/find-schemes/other-details") {
-    return <OtherDetailsPage />;
+    return <SavedSchemeProfile><OtherDetailsPage /></SavedSchemeProfile>;
   }
 
   if (path === "/find-schemes/review") {
-    return <ReviewPage />;
+    return <SavedSchemeProfile><ReviewPage /></SavedSchemeProfile>;
   }
 
   if (
     path === "/find-schemes/matching-schemes" ||
     path === "/find-schemes/results"
   ) {
-    return <MatchingSchemesPage />;
+    return <SavedSchemeProfile><MatchingSchemesPage /></SavedSchemeProfile>;
   }
 
     if (path === "/about") {

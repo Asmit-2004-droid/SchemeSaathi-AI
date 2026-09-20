@@ -29,7 +29,7 @@ export default function AccountForm({ register = false }) {
   return <AuthLayout mode={register ? "register" : "signin"}><AuthCard title={register ? t("Create Account") : t("Sign In")}>
     <form onSubmit={submit} className="mx-auto mt-7 max-w-lg">
       {register && <><label>{t("Full name")}<input className={input} name="full_name" required minLength={2} autoComplete="name" /></label>
-      <label>{t("Mobile number")}<input className={input} name="mobile" type="tel" pattern="[6-9][0-9]{9}" maxLength={10} required autoComplete="tel" /></label>
+      <label>{t("Mobile number (optional)")}<input className={input} name="mobile" type="tel" pattern="[6-9][0-9]{9}" maxLength={10} autoComplete="tel" /></label>
       <label>{t("Email")}<input className={input} name="email" type="email" required autoComplete="email" /></label></>}
       {!register && <label>{t("Email or mobile number")}<input className={input} name="identifier" required autoComplete="username" /></label>}
       <label>{t("Password")}
