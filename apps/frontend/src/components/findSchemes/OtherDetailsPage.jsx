@@ -83,17 +83,6 @@ export default function OtherDetailsPage() {
     if (saving) return;
     setSaveError("");
 
-    if (
-      !form.registeredBusiness ||
-      !form.fundingRequired ||
-      !form.preferredSupport ||
-      !form.previousScheme ||
-      !form.interestedSchemeType
-    ) {
-      alert("Please complete all the details.");
-      return;
-    }
-
     setSaving(true);
     try { await saveSchemeProfileSection("other", form); }
     catch (error) { setSaveError(apiError(error)); setSaving(false); return; }
@@ -230,7 +219,7 @@ function FormSelect({
   value,
   onChange,
   options,
-  optional = false,
+  optional = true,
 }) {
   const { t } = useLanguage();
   return (
