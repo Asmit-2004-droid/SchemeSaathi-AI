@@ -91,16 +91,6 @@ export default function BusinessDetailsPage() {
     if (saving) return;
     setSaveError("");
 
-    if (
-      !form.businessType ||
-      !form.businessActivity.trim() ||
-      !form.businessStage ||
-      !form.yearsInBusiness
-    ) {
-      alert("Please complete all business details.");
-      return;
-    }
-
     setSaving(true);
     try { await saveSchemeProfileSection("business", form); }
     catch (error) { setSaveError(apiError(error)); setSaving(false); return; }
@@ -268,7 +258,7 @@ function FormSelect({
   value,
   onChange,
   options,
-  optional = false,
+  optional = true,
 }) {
   const { t } = useLanguage();
   return (
