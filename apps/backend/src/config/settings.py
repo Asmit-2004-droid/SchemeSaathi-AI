@@ -1,10 +1,13 @@
 from functools import lru_cache
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     APPS_SCRIPT_URL: str = ""
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    # Load the existing backend settings consistently from root or backend cwd.
+    # Explicit process environment continues to take precedence.
+    model_config = SettingsConfigDict(env_file=Path(__file__).resolve().parents[2] / ".env", extra="ignore")
 
     ENABLE_STAFF_API: bool = False
     PUBLIC_SITE_URL: str = "http://localhost:5173"
@@ -83,13 +86,19 @@ class Settings(BaseSettings):
     AWS_SECRET_ACCESS_KEY: str = ""
     AWS_REGION: str = "ap-south-1"
 
-    # Transactional email is delivered over Brevo's HTTPS API. This works on
-    # Render Free without opening mail transport ports.
+    # Transactional email is delivered over Brevo's HTTPS API or SMTP (Gmail/Outlook).
     EMAIL_PROVIDER: str = "brevo"
     SUPPORT_EMAIL: str = "customercareprashasti@gmail.com"
     EMAIL_FROM_ADDRESS: str = "customercareprashasti@gmail.com"
     EMAIL_FROM_NAME: str = "SchemeSaathi Support"
     BREVO_API_KEY: str = ""
+
+    # Direct SMTP Configuration (supports Gmail, Outlook, custom SMTP)
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_USE_TLS: bool = True
 
 
 @lru_cache
