@@ -33,11 +33,77 @@ def _failure_reason(response: httpx.Response) -> str:
     return "request_rejected"
 
 
+def _send_smtp_sync(to_address: str, subject: str, body: str) -> bool:
+    import smtplib
+    from email.message import EmailMessage
+
+    msg = EmailMessage()
+    from_addr = settings.EMAIL_FROM_ADDRESS or settings.SMTP_USER
+    from_name = settings.EMAIL_FROM_NAME or "SchemeSaathi Support"
+    msg["From"] = f"{from_name} <{from_addr}>"
+    msg["To"] = to_address
+    msg["Subject"] = subject
+    msg.set_content(body)
+
+    host = settings.SMTP_HOST or "smtp.gmail.com"
+    user = (settings.SMTP_USER or "").strip()
+    password = (settings.SMTP_PASSWORD or "").replace(" ", "").strip()
+    ports_to_try = [settings.SMTP_PORT or 587]
+    if 465 not in ports_to_try:
+        ports_to_try.append(465)
+
+    last_error = None
+    for port in ports_to_try:
+        try:
+            if port == 465:
+                server = smtplib.SMTP_SSL(host, port, timeout=12)
+            else:
+                server = smtplib.SMTP(host, port, timeout=12)
+                if settings.SMTP_USE_TLS:
+                    server.starttls()
+            if user and password:
+                server.login(user, password)
+            server.send_message(msg)
+            server.quit()
+            logger.info("smtp_email_sent", recipient=to_address, subject=subject, port=port)
+            return True
+        except Exception as exc:
+            last_error = exc
+            print(f"[SMTP WARNING] Port {port} delivery failed: {type(exc).__name__}: {exc}", flush=True)
+
+    print(f"\n[SMTP ERROR] All email delivery attempts failed: {type(last_error).__name__}: {last_error}", flush=True)
+    print(f"[SMTP ERROR] To enable instant sign-in without SMTP, set EMAIL_PROVIDER=mock in Render environment variables.\n", flush=True)
+    logger.warning("smtp_delivery_failed", error=str(last_error))
+    return False
+
+
 def email_ready() -> bool:
+    provider = (settings.EMAIL_PROVIDER or "").lower()
+    if provider in {"mock", "console", "test", "local"}:
+        return True
+    if provider in {"smtp", "gmail"} or (settings.SMTP_USER and settings.SMTP_PASSWORD):
+        return bool(settings.SMTP_USER and settings.SMTP_PASSWORD)
     return bool(settings.BREVO_API_KEY and settings.EMAIL_FROM_ADDRESS)
 
 
 async def send_email(to_address: str, subject: str, body: str) -> bool:
+    provider = (settings.EMAIL_PROVIDER or "").lower()
+    if provider in {"mock", "console", "test", "local"}:
+        logger.info("email_mock_delivered", recipient=to_address, subject=subject)
+        print("\n" + "=" * 60, flush=True)
+        print(f" [DEV EMAIL / OTP DELIVERY - {provider.upper()}]", flush=True)
+        print(f" To: {to_address}", flush=True)
+        print(f" From: {settings.EMAIL_FROM_ADDRESS}", flush=True)
+        print(f" Subject: {subject}", flush=True)
+        print("-" * 60, flush=True)
+        print(body, flush=True)
+        print("=" * 60 + "\n", flush=True)
+        return True
+
+    if provider in {"smtp", "gmail"} or (settings.SMTP_USER and settings.SMTP_PASSWORD):
+        import asyncio
+        return await asyncio.to_thread(_send_smtp_sync, to_address, subject, body)
+
     if not email_ready():
         logger.warning("email_not_configured")
         return False

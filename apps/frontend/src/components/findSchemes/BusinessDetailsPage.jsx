@@ -68,6 +68,7 @@ export default function BusinessDetailsPage() {
   const { t } = useLanguage();
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [requestedSupport, setRequestedSupport] = useState(() => getUserItem("schemeSaathiPersonalDetails")?.entrepreneurshipSupport === "Yes");
   const editMode =
     sessionStorage.getItem("schemeSaathiEditMode");
 
@@ -90,16 +91,6 @@ export default function BusinessDetailsPage() {
     e.preventDefault();
     if (saving) return;
     setSaveError("");
-
-    if (
-      !form.businessType ||
-      !form.businessActivity.trim() ||
-      !form.businessStage ||
-      !form.yearsInBusiness
-    ) {
-      alert("Please complete all business details.");
-      return;
-    }
 
     setSaving(true);
     try { await saveSchemeProfileSection("business", form); }
@@ -124,6 +115,21 @@ export default function BusinessDetailsPage() {
       window.location.assign("/find-schemes/personal-info");
     }
   };
+
+  if (!requestedSupport) return <MainLayout><main className="mx-auto max-w-3xl px-5 py-12">
+    <h1 className="text-2xl font-bold text-[#172b49]">{t("Entrepreneurship support")}</h1>
+    <p className="mt-4 text-sm text-slate-600">{t("Business questions are optional and only used when you want entrepreneurship support. Your previously saved answers are preserved.")}</p>
+    {saveError && <p role="alert" className="mt-4 text-red-700">{saveError}</p>}
+    <button type="button" disabled={saving} className="mt-6 rounded-lg bg-[#0d2b55] px-5 py-3 text-white" onClick={async () => {
+      setSaving(true);
+      try {
+        await saveSchemeProfileSection("personal", { ...(getUserItem("schemeSaathiPersonalDetails") || {}), entrepreneurshipSupport: "Yes" });
+        setRequestedSupport(true);
+      } catch (error) { setSaveError(apiError(error)); }
+      finally { setSaving(false); }
+    }}>{t("I want entrepreneurship support")}</button>
+    <a href="/find-schemes/other-details" className="ml-4 text-sm text-[#0d2b55] underline">{t("Continue without business questions")}</a>
+  </main></MainLayout>;
 
   return (
     <MainLayout>
@@ -151,6 +157,7 @@ export default function BusinessDetailsPage() {
                   <FormSelect
                     label={t("Business Type")}
                     name="businessType"
+                    optional
                     placeholder={t("Select Business Type")}
                     value={form.businessType}
                     onChange={handleChange}
@@ -168,6 +175,7 @@ export default function BusinessDetailsPage() {
                   <FormSelect
                     label={t("Business Stage")}
                     name="businessStage"
+                    optional
                     placeholder={t("Select Stage")}
                     value={form.businessStage}
                     onChange={handleChange}
@@ -177,6 +185,7 @@ export default function BusinessDetailsPage() {
                   <FormSelect
                     label={t("Years in Business")}
                     name="yearsInBusiness"
+                    optional
                     placeholder={t("Select")}
                     value={form.yearsInBusiness}
                     onChange={handleChange}
